@@ -1,0 +1,435 @@
+#etape0:Conception
+library(readxl)
+form <- read_excel("form.xlsx")
+View(form)
+#etape1:Pretraitement
+#conversion
+form$etablissement=as.factor(form$etablissement)
+form$filiere=as.factor(form$filiere)
+form$age=as.integer(form$age)
+form$sexe=as.factor(form$sexe)
+form$Annee =as.ordered(form$Annee)
+#Marché
+form$M1=as.factor(form$M1)
+form$M2=as.factor(form$M2)
+form$M3=as.factor(form$M3)
+form$M4=as.factor(form$M4)
+form$M5=as.factor(form$M5)
+#Ajout pas d'accord
+K=c(levels(form$M1),"Pas du tout d'accord")
+levels(form$M1)=levels(form$M2)=levels(form$M3)=levels(form$M4)=levels(form$M5)=K
+#diff
+form$D1=as.factor(form$D1)
+form$D2=as.factor(form$D2)
+form$D3=as.factor(form$D3)
+form$D4=as.factor(form$D4)
+form$D5=as.factor(form$D5)
+#Ajout pas d'accord
+K=c(levels(form$D1),"Pas du tout d'accord")
+levels(form$D1)=levels(form$D2)=levels(form$D3)=levels(form$D4)=levels(form$D5)=K
+#recoman
+form$R1=as.factor(form$R1)
+form$R2=as.factor(form$R2)
+form$R3=as.factor(form$R3)
+form$R4=as.factor(form$R4)
+form$R5=as.factor(form$R5)
+#Ajout pas d'accord
+K=c(levels(form$R1),"Pas du tout d'accord")
+levels(form$R1)=levels(form$R2)=levels(form$R3)=levels(form$R4)=levels(form$R5)=K
+# valeurs aberrantes
+boxplot(form$age)
+#Detecter les valeurs abérantes et les convertir en valeurs manquantes
+for(i in  1:length(form$age)){
+  for (j in 1:length(boxplot(form$age)$out)) {
+    if(boxplot(form$age)$out[j]==form$age[i] & !is.na(form$age[i])){
+      form$age[i]<-NA}
+    }
+  }
+#Detecter les valeurs manquante 
+a=0
+for(i in 1:length(form$age)){
+  if(is.na(form$age[i])){
+    a=a+1}
+}
+a
+#calcul les effectif de NA
+propNA=a/length(form$age)
+propNA
+#nombre des indvidus apres exclusion de NA
+n=length(form$age)-a
+#calcul de la moyenne
+m<-mean(form$age,na.rm=T)
+m
+# proportionalité inferieur a 5%
+# on prefere exclure plus que estimer 
+if(propNA<0.05){
+  if(n>30){
+    #exclusion
+    for(i in  1:length(form$age)){
+      if(is.na(form$age[i])){
+        form$age[-i]
+      }
+    }
+  }
+  else{
+    #estimation
+    for(i in  1:length(form$age)){
+      if(is.na(form$age[i])){
+        form$age[i]<- m
+      }
+    }
+  }
+}
+#supérieur a 5%
+# on prefere estimer plus que exclure
+if(propNA>0.05){
+  #estimation
+  for(i in  1:length(form$age)){
+    if(is.na(form$age[i])){
+      #calcul de la moyenne sans prendre en consideration les  NA
+      form$age[i]<-ceiling(m)
+      }
+  }
+  #if(n>30){#exclusion}
+  for(i in  1:length(form$age)){
+    if(is.na(form$age[i])){
+      form$age[-i]
+    }
+   }
+}
+#Analyse de fiabilité des echelles 
+library("Rcmdr")
+
+#slides
+#Etape2 Analyse de donnes
+#Analyse univarié
+#Pour les variables quanti
+#Age
+hist(form$age)
+summary(form$age)
+#test de normalité
+shapiro.test(form$age)
+#p<5%-->il ya une difference significative donc il ya pas de normalité
+#test de quasi normalité
+library("moments")
+skewness(form$age)
+kurtosis(form$age)
+#pas de quasi normalité
+#Pour les variables quali
+plot(form$etablissement)
+plot(form$filiere)
+plot(form$sexe)
+plot(form$Annee)
+plot(form$M1)
+plot(form$M2)
+plot(form$M3)
+plot(form$M4)
+plot(form$M5)
+#
+plot(form$D1)
+plot(form$D2)
+plot(form$D3)
+plot(form$D4)
+plot(form$D5)
+#
+plot(form$R1)
+plot(form$R2)
+plot(form$R3)
+plot(form$R4)
+plot(form$R5)
+#Analyse quali
+summary(form)
+#supprime les elements concernat hors ensa
+ne=rev(which(form$etablissement != "ENSA"))
+for(i in ne){
+  form=form[-i,]
+}
+#supprime les  elements hors filiere info
+gi=rev(which(form$filiere != "Génie informatique"))
+for(i in gi){
+  form=form[-i,]
+}
+#Analyse multivarié
+#Recommendation utilisation de score
+
+#etudiant -c
+#Rappel age ne suit pas la loi normal ->test non paramétrique 
+#Relation age -sexe
+table(form$sexe,form$age)
+plot(form$sexe,form$age)
+wilcox.test(form$sexe~form$age)
+#24%>5% -> il nya pas de relation entre sexe et age
+#Reation age-annee
+table(form$Annee,form$age)
+plot(form$Annee,form$age)
+kruskal.test(form$Annee,form$age)
+#30>5% -> il nya pas de relation entre sexe et age
+#relation sexe -annee
+table(form$Annee,form$sexe)
+plot(form$Annee,form$sexe)
+chisq.test(form$Annee,form$sexe)
+#22>5%-> il nya pas de relation  entre  Annee et sexe
+
+#Pour M1 avec M2 -f
+table(form$M1,form$M2)
+plot(form$M1,form$M2)
+chisq.test(form$M1,form$M2)
+#Pour M1 avec M3
+table(form$M1,form$M3)
+plot(form$M1,form$M3)
+chisq.test(form$M1,form$M3)
+#Pour M1 avec M4
+table(form$M1,form$M4)
+plot(form$M1,form$M4)
+chisq.test(form$M1,form$M4)
+#Pour M1 avec M5
+table(form$M1,form$M5)
+plot(form$M1,form$M5)
+chisq.test(form$M1,form$M5)
+#Pour M2 avec M3
+table(form$M2,form$M3)
+plot(form$M2,form$M3)
+chisq.test(form$M2,form$M3)
+#Pour M2 avec M4
+table(form$M2,form$M4)
+plot(form$M2,form$M4)
+chisq.test(form$M2,form$M4)
+#Pour M2 avec M5
+table(form$M2,form$M5)
+plot(form$M2,form$M5)
+chisq.test(form$M2,form$M5)
+#Pour M3 avec M4
+table(form$M3,form$M4)
+plot(form$M3,form$M4)
+chisq.test(form$M3,form$M4)
+#Pour M3 avec M5
+table(form$M3,form$M5)
+plot(form$M3,form$M5)
+chisq.test(form$M3,form$M5)
+#Pour M4 avec M5
+table(form$M4,form$M5)
+plot(form$M4,form$M5)
+chisq.test(form$M4,form$M5)
+#Recommendation -y
+ind=1
+for(i in form[16:20]){
+  ind2=1
+  for(j in form[16:20]){
+    if(ind2>ind){
+      p=chisq.test(i,j)$p.value
+      print(p)
+      print("*******")
+      if(p*100>5){
+        a=paste("Pas de relation significative entre R",ind," et R",ind2,sep = "")
+        print(a)
+      }else{
+        a=paste("Il y a une relation significative entre R",ind," et R",ind2,sep = "")
+        print(a)
+      }
+      ind2=ind2+1 
+    }else{
+      ind2=ind2+1
+    }
+    
+  }
+  ind=ind+1
+}
+#Pour D1 avec D2 -f
+table(form$D1,form$D2)
+plot(form$D1,form$D2)
+chisq.test(form$D1,form$D2)
+#Pour D1 avec D3
+table(form$D1,form$D3)
+plot(form$D1,form$D3)
+chisq.test(form$D1,form$D3)
+#Pour D1 avec D4
+table(form$D1,form$D4)
+plot(form$D1,form$D4)
+chisq.test(form$D1,form$D4)
+#Pour D1 avec D5
+table(form$D1,form$D5)
+plot(form$D1,form$D5)
+chisq.test(form$D1,form$D5)
+#Pour D2 avec D3
+table(form$D2,form$D3)
+plot(form$D2,form$D3)
+chisq.test(form$D2,form$D3)
+#Pour D2 avec D4
+table(form$D2,form$D4)
+plot(form$D2,form$D4)
+chisq.test(form$D2,form$D4)
+#Pour D2 avec D5
+table(form$D2,form$D5)
+plot(form$D2,form$D5)
+chisq.test(form$D2,form$D5)
+#Pour D3 avec D4
+table(form$D3,form$D4)
+plot(form$D3,form$D4)
+chisq.test(form$D3,form$D4)
+#Pour D3 avec D5
+table(form$D3,form$D5)
+plot(form$D3,form$D5)
+chisq.test(form$D3,form$D5)
+#Pour D4 avec D5
+table(form$D4,form$D5)
+plot(form$D4,form$D5)
+chisq.test(form$D4,form$D5)
+
+
+#Dificultés - etudiants -y
+#Pour Etudiant-Difficulte
+ind=3
+for(i in form[3:5]){
+  if(!form[3]){
+    ind2=1
+    for(j in form[11:15]){
+      p=chisq.test(i,j)$p.value
+      print(p)
+      print("*******")
+      if(p*100>5){
+        a=paste("Pas de relation significative entre E",ind," et D",ind2,sep = "")
+        print(a)
+      }else{
+        a=paste("Il y a une relation significative entre E",ind," et D",ind2,sep = "")
+        print(a)
+      }
+      ind2=ind2+1
+      
+    }
+    ind=ind+1
+  }else{
+    ind2=1
+    for(j in form[11:15]){
+      p=kruskal.test(i,j)$p.value
+      print(p)
+      print("*******")
+      if(p*100>5){
+        a=paste("Pas de relation significative entre E",ind," et D",ind2,sep = "")
+        print(a)
+      }else{
+        a=paste("Il y a une relation significative entre E",ind," et D",ind2,sep = "")
+        print(a)
+      }
+      ind2=ind2+1
+      
+    }
+    ind=ind+1
+  }
+}
+
+#Pour Marche travail-Difficultes-c
+ind=1
+for(i in form[6:10]){
+  ind2=1
+  for(j in form[11:15]){
+    p=chisq.test(i,j)$p.value
+    print(p)
+    print("*********************")
+    if(p*100>5){
+      a=paste("Pas de relation significative entre M",ind," et D",ind2,sep = "")
+      print(a)
+    }else{
+      a=paste("Il y a une relation significative entre M",ind," et D",ind2,sep = "")
+      print(a)
+    }
+    ind2=ind2+1
+    
+  }
+  ind=ind+1
+}
+#########
+#########
+#Pour Etudiant-Marche-f
+ind=3
+for(i in form[3:5]){
+  if(!form[3]){
+    ind2=1
+    for(j in form[6:10]){
+      p=chisq.test(i,j)$p.value
+      print(p)
+      print("*******")
+      if(p*100>5){
+        a=paste("Pas de relation significative entre E",ind," et M",ind2,sep = "")
+        print(a)
+      }else{
+        a=paste("Il y a une relation significative entre E",ind," et M",ind2,sep = "")
+        print(a)
+      }
+      ind2=ind2+1
+      
+    }
+    ind=ind+1
+  }else{
+    ind2=1
+    for(j in form[6:10]){
+      p=kruskal.test(i,j)$p.value
+      print(p)
+      print("*******")
+      if(p*100>5){
+        a=paste("Pas de relation significative entre E",ind," et M",ind2,sep = "")
+        print(a)
+      }else{
+        a=paste("Il y a une relation significative entre E",ind," et M",ind2,sep = "")
+        print(a)
+      }
+      ind2=ind2+1
+      
+    }
+    ind=ind+1
+  }
+}
+#########
+#Pour recommandation (indice bon)-y
+#Etudiants-recomandation 
+##########Pour Etudiant-Recommendation
+ind=3
+for(i in form[3:5]){
+  if(!form[3]){
+    ind2=1
+    for(j in form[16:20]){
+      p=chisq.test(i,j)$p.value
+      print(p)
+      print("*******")
+      if(p*100>5){
+        a=paste("Pas de relation significative entre E",ind," et R",ind2,sep = "")
+        print(a)
+      }else{
+        a=paste("Il y a une relation significative entre E",ind," et R",ind2,sep = "")
+        print(a)
+      }
+      ind2=ind2+1
+      
+    }
+    ind=ind+1
+  }else{
+    ind2=1
+    for(j in form[16:20]){
+      p=kruskal.test(i,j)$p.value
+      print(p)
+      print("*******")
+      if(p*100>5){
+        a=paste("Pas de relation significative entre E",ind," et R",ind2,sep = "")
+        print(a)
+      }else{
+        a=paste("Il y a une relation significative entre E",ind," et R",ind2,sep = "")
+        print(a)
+      }
+      ind2=ind2+1
+      
+    }
+    ind=ind+1
+  }
+}
+#Representativité de l'échatillon-c
+#slide
+
+
+
+
+
+
+
+
+
+
+
